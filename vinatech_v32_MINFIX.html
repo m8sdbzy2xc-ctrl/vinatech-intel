@@ -421,34 +421,25 @@ async function callGemini(prompt) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    // 1. AI의 역할 설정 (페르소나)
-                    system_instruction: { 
-                        parts: [{ text: GEMS_SYSTEM }] 
-                    },
-                    // 2. 실제 질문 내용 (이 부분이 꼭 들어가야 합니다!)
                     contents: [
                         {
-                            parts: [{ text: prompt }]
+                            parts: [
+                                { text: GEMS_SYSTEM + "\n\n질문: " + prompt }
+                            ]
                         }
-                    ],
-                    // 3. 답변 최적화 설정
-                    generationConfig: {
-                        temperature: 0.7,
-                        maxOutputTokens: 2048
-                    }
+                    ]
                 })
             }
         );
 
         const data = await res.json();
-        
-        // 에러 발생 시 처리
+        console.log("Gemini 응답:", data); 
+
         if(data.error) { 
             console.warn('Gemini error:', data.error); 
             return null; 
         }
         
-        // 최종 답변 텍스트만 추출해서 반환
         return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
 
     } catch(e) { 
@@ -476,13 +467,25 @@ async function callGemini(prompt) {
             inp.type = inp.type === 'password' ? 'text' : 'password';
         }
         function saveApiKey() {
-            const val = document.getElementById('apikey-input').value.trim();
-            if(!val) { alert('API 키를 입력해주세요.'); return; }
+    const val = document.getElementById('apikey-input').value.trim();
+    if(!val) { alert('API 키를 입력해주세요.'); return; }
+    
+    fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${val}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: 'test' }] }] })
+    }).then(res => {
+        if(res.ok) {
             geminiKey = val;
             localStorage.setItem('v32_gemini_key', geminiKey);
             document.getElementById('apikey-modal').classList.remove('open');
             updateKeyStatus();
+            alert('✅ GEMS API 연결에 성공했습니다!');
+        } else {
+            alert('❌ 유효하지 않은 API 키입니다.');
         }
+    }).catch(() => alert('네트워크 연결을 확인해주세요.'));
+}
         function updateKeyStatus() {
             const badge = document.getElementById('sidebar-key-badge');
             const dot = document.getElementById('sidebar-key-dot');
