@@ -412,6 +412,7 @@
 
         // ===== GEMINI API CALL =====
 // ===== GEMINI API CALL =====
+// ===== GEMINI API CALL =====
 async function callGemini(prompt) {
     if(!geminiKey) return null;
     try {
@@ -516,17 +517,37 @@ async function callGemini(prompt) {
         }
 
         // ===== CATEGORY SYNC =====
-        function syncCategorySelects() {
-            ['filter-cat', 'm-cat', 'ai-cat', 'report-cat'].forEach(id => {
-                const el = document.getElementById(id);
-                if(!el) return;
-                const cur = el.value;
-                el.innerHTML = (id === 'filter-cat' ? '<option value="">전체 카테고리</option>' : '') +
-                    categories.map(c => `<option value="${c}">${c}</option>`).join('');
-                if(cur && categories.includes(cur)) el.value = cur;
-            });
+        function saveApiKey() {
+    const val = document.getElementById('apikey-input').value.trim();
+    if(!val) { alert('API 키를 입력해주세요.'); return; }
+    
+    fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${val}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: 'test' }] }] })
+    }).then(res => {
+        if(res.ok) {
+            geminiKey = val;
+            localStorage.setItem('v32_gemini_key', geminiKey);
+            document.getElementById('apikey-modal').classList.remove('open');
+            updateKeyStatus();
+            alert('✅ GEMS API 연결에 성공했습니다!');
+        } else {
+            alert('❌ 유효하지 않은 API 키입니다. 주소나 키를 확인하세요.');
         }
-
+    }).catch(() => alert('네트워크 연결을 확인해주세요.'));
+}
+// ===== CATEGORY SYNC =====
+function syncCategorySelects() {
+    ['filter-cat', 'm-cat', 'ai-cat', 'report-cat'].forEach(id => {
+        const el = document.getElementById(id);
+        if(!el) return;
+        const cur = el.value;
+        el.innerHTML = (id === 'filter-cat' ? '<option value="">전체 카테고리</option>' : '') +
+            categories.map(c => `<option value="${c}">${c}</option>`).join('');
+        if(cur && categories.includes(cur)) el.value = cur;
+    });
+}
         // ===== RENDER EVENTS =====
         function renderEvents() {
             syncCategorySelects();
