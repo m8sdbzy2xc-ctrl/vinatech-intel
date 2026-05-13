@@ -160,6 +160,15 @@
                 <span id="sidebar-key-text">미연결</span>
             </div>
             <button onclick="openApiKeyModal()" style="margin-top:10px; width:100%; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:7px; font-family:inherit; font-size:10px; font-weight:700; color:#86efac; cursor:pointer;">🔑 키 재설정</button>
+            <div style="margin-top:14px; border-top:1px solid rgba(255,255,255,0.08); padding-top:14px;">
+                <div style="font-size:10px; font-weight:800; color:#4d7c60; margin-bottom:8px; letter-spacing:0.06em; text-transform:uppercase;">회사 로고</div>
+                <div onclick="document.getElementById('logo-file').click()" style="width:100%; height:50px; background:rgba(255,255,255,0.06); border:1px dashed rgba(134,239,172,0.4); border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; overflow:hidden;" id="logo-slot">
+                    <img id="logo-preview" style="display:none; max-width:100%; max-height:48px; object-fit:contain;">
+                    <span id="logo-empty" style="font-size:10px; color:#4d7c60; font-weight:700;">+ 로고 업로드</span>
+                </div>
+                <input type="file" id="logo-file" style="display:none;" accept="image/*" onchange="handleLogoUpload()">
+                <button onclick="removeLogo()" id="logo-remove" style="display:none; margin-top:6px; width:100%; background:none; border:none; font-size:9px; color:#6b7280; cursor:pointer; font-family:inherit;">✕ 로고 삭제</button>
+            </div>
         </div>
     </aside>
 
@@ -262,12 +271,55 @@
 
             <!-- ===== TAB: REPORT ===== -->
             <section id="report" class="tab-content">
+
+                <!-- 모드 선택 버튼 -->
+                <div style="display:flex; gap:12px; margin-bottom:16px;">
+                    <button class="report-type-btn selected" id="mode-generate" onclick="switchReportMode('generate')" style="flex:1; padding:18px; font-size:14px;">🪄 PPT 생성</button>
+                    <button class="report-type-btn" id="mode-inspect" onclick="switchReportMode('inspect')" style="flex:1; padding:18px; font-size:14px;">🔍 문서 점검</button>
+                </div>
+
+                <!-- ===== 문서 점검 모드 ===== -->
+                <div id="inspect-mode" style="display:none;">
+                    <div class="card" style="padding:28px; margin-bottom:16px;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                            <i data-lucide="shield-check" style="width:14px;height:14px;color:#16a34a;"></i>
+                            <span style="font-size:10px; font-weight:900; letter-spacing:0.1em; color:#16a34a; text-transform:uppercase;">GEMS Document Inspector</span>
+                        </div>
+                        <p style="font-size:12px; color:#9ca3af; margin:0 0 20px;">계획안·결과보고서 이미지를 올리면 GEMS가 Brand·Operation·Strategy 3가지 관점으로 점검합니다.</p>
+                        <div style="margin-bottom:16px;">
+                            <label class="field-label">점검할 문서 이미지 업로드</label>
+                            <div id="inspect-drop-zone" onclick="document.getElementById('inspect-file').click()" style="width:100%; height:160px; background:#f0fdf4; border:2px dashed #86efac; border-radius:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; transition:0.15s;">
+                                <i data-lucide="upload-cloud" style="width:32px;height:32px;color:#86efac;margin-bottom:8px;"></i>
+                                <p style="font-size:13px; font-weight:700; color:#86efac; margin:0;">클릭하여 이미지 업로드</p>
+                                <p style="font-size:10px; color:#d1d5db; margin:4px 0 0;">계획안 또는 결과보고서 캡처 이미지</p>
+                            </div>
+                            <input type="file" id="inspect-file" style="display:none;" accept="image/*" onchange="handleInspectFile()">
+                        </div>
+                        <div id="inspect-preview" style="display:none; margin-bottom:16px;">
+                            <div style="width:100%; max-height:280px; background:#f0fdf4; border-radius:14px; border:1px solid #dcfce7; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+                                <img id="inspect-preview-img" style="max-width:100%; max-height:280px; object-fit:contain;">
+                            </div>
+                        </div>
+                        <div style="margin-bottom:16px;">
+                            <label class="field-label">행사 카테고리</label>
+                            <select id="inspect-cat" class="field-input" style="max-width:200px;"></select>
+                        </div>
+                        <button onclick="runInspection()" id="inspect-btn" class="btn-primary" style="display:flex; align-items:center; justify-content:center; gap:8px; font-size:15px; padding:16px;">
+                            <i data-lucide="shield-check" style="width:18px;height:18px;"></i>
+                            GEMS 문서 점검 시작
+                        </button>
+                        <div id="inspect-result" style="display:none; margin-top:24px; padding-top:20px; border-top:1px solid #dcfce7;"></div>
+                    </div>
+                </div>
+
+                <!-- ===== PPT 생성 모드 ===== -->
+                <div id="generate-mode">
                 <div class="card" style="padding:28px; margin-bottom:16px;">
                     <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
                         <i data-lucide="cpu" style="width:14px;height:14px;color:#16a34a;"></i>
                         <span style="font-size:10px; font-weight:900; letter-spacing:0.1em; color:#16a34a; text-transform:uppercase;">Report Intelligence</span>
                     </div>
-                    <p style="font-size:12px; color:#9ca3af; margin:0 0 24px;">업로드한 이미지를 GEMS가 분석하여 레이아웃 구조를 파악한 뒤, 유사한 형태의 PPT를 생성합니다.</p>
+                    <p style="font-size:12px; color:#9ca3af; margin:0 0 24px;">업로드한 이미지를 GEMS가 분석하여 내용을 추출한 뒤, PPT로 재구성합니다.</p>
 
                     <div style="margin-bottom:20px;">
                         <label class="field-label">① 보고서 기반 카테고리</label>
@@ -342,6 +394,7 @@
                         <div id="post-recommend-content"></div>
                     </div>
                 </div>
+                </div> <!-- /generate-mode -->
             </section>
 
         </div>
@@ -419,11 +472,22 @@
         let selectedReportType = 'plan';
         let selectedReportEventId = null;
         let visionLayoutData = null; // stores analyzed layout from Gemini Vision
+        let companyLogo = localStorage.getItem('v32_logo') || '';
 
         const GEMS_SYSTEM = `당신은 비나텍(Vinatech)의 전략 문화 비서 GEMS입니다.
-비나텍은 전기이중층 커패시터(EDLC) 전문 제조기업으로, 사내 문화행사(마라톤, 수요아카데미, 가정의 달 행사, 교육 등)를 기획·운영합니다.
-항상 실무적이고 구체적인 조언을 드리며, 과거 피드백 히스토리를 반드시 참고하여 같은 실수가 반복되지 않도록 경고해주세요.
-응답은 항상 한국어로, 간결하고 번호를 붙여서 제시하세요.`;
+비나텍은 전기이중층 커패시터(EDLC) 전문 제조기업으로, 사내 문화행사(마라톤, 수요아카데미, 가정의 달 행사, 봉사활동, 교육 등)를 기획·운영합니다.
+
+[핵심 판단 기준 - 반드시 이 3가지 관점으로 분석하세요]
+① 브랜드 품격 (Brand): 비나텍 이름과 로고가 선명히 드러나는가? 디자인 톤앤매너가 회사 자부심을 드러내는가? 이름 누락은 절대 금물.
+② 운영 무결점 (Operation): 동선 혼선, 물품 부족, 인원 배치, 안전 수칙, 시간 배분 등 실무 리스크를 엄격히 짚어라.
+③ 전략적 임팩트 (Strategy): 이 행사가 직원들에게 어떤 감동을 주는가? 경영진 메시지가 명확히 전달되는가?
+
+[행동 원칙]
+- 뻔하고 당연한 말은 절대 하지 마라. 일반론 금지.
+- 과거 피드백 히스토리를 반드시 참고하여 같은 실수 반복 시 강하게 경고하라.
+- 추천사항은 비나텍 행사 특성에 맞는 구체적이고 실행 가능한 내용으로 제시하라.
+- 예시: 만족도 설문 QR코드를 마지막 슬라이드에 삽입, 버스 탑승 인원 체크리스트 별도 슬라이드 추가 등
+- 응답은 항상 한국어로, 번호를 붙여 간결하게 제시하라.`;
 
         // ===== GEMINI API CALL (text) =====
         async function callGemini(prompt) {
@@ -518,6 +582,7 @@
             localStorage.setItem('v32_gemini_key', geminiKey);
             document.getElementById('apikey-modal').classList.remove('open');
             updateKeyStatus();
+            updateLogoUI();
             alert('✅ Claude API 연결 완료! AI 기능이 활성화됩니다.');
         }
         function updateKeyStatus() {
@@ -997,6 +1062,9 @@ ${pastFB ? `과거 AI 피드백:\n${pastFB}` : ''}
             s1.addText(typeLabel+' 보고서', { x:0.55, y:3.3, w:4, h:0.5, color:ACCENT, fontSize:16, bold:true, fontFace:'Malgun Gothic' });
             if(loc) s1.addText('📍 '+loc+(partner ? '   |   🤝 '+partner : ''), { x:0.55, y:3.9, w:9, h:0.45, color:LIGHT, fontSize:13, fontFace:'Malgun Gothic' });
             s1.addText(e.date+'   '+new Date().toLocaleDateString('ko-KR'), { x:0.55, y:5.05, w:9, h:0.35, color:ACCENT, fontSize:11, fontFace:'Malgun Gothic' });
+            if(companyLogo) {
+                s1.addImage({ data:companyLogo, x:7.5, y:0.2, w:2.2, h:0.6, sizing:{type:'contain',w:2.2,h:0.6} });
+            }
 
             // ===== SLIDE 2: 개요/요약 (Vision 추출 내용 기반) =====
             const extracted = visionLayoutData;
@@ -1142,6 +1210,161 @@ ${pastFB ? `과거 AI 피드백:\n${pastFB}` : ''}
             `).join('');
 
             postArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if(window.lucide) lucide.createIcons();
+        }
+
+
+        // ===== LOGO MANAGEMENT =====
+        function handleLogoUpload() {
+            const file = document.getElementById('logo-file').files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                companyLogo = ev.target.result;
+                localStorage.setItem('v32_logo', companyLogo);
+                updateLogoUI();
+            };
+            reader.readAsDataURL(file);
+        }
+        function removeLogo() {
+            companyLogo = '';
+            localStorage.removeItem('v32_logo');
+            updateLogoUI();
+        }
+        function updateLogoUI() {
+            const preview = document.getElementById('logo-preview');
+            const empty = document.getElementById('logo-empty');
+            const removeBtn = document.getElementById('logo-remove');
+            if(companyLogo) {
+                preview.src = companyLogo;
+                preview.style.display = 'block';
+                empty.style.display = 'none';
+                removeBtn.style.display = 'block';
+            } else {
+                preview.style.display = 'none';
+                empty.style.display = 'block';
+                removeBtn.style.display = 'none';
+            }
+        }
+
+        // ===== REPORT MODE SWITCH =====
+        let currentReportMode = 'generate';
+        let inspectImageSrc = null;
+
+        function switchReportMode(mode) {
+            currentReportMode = mode;
+            document.getElementById('mode-generate').classList.toggle('selected', mode === 'generate');
+            document.getElementById('mode-inspect').classList.toggle('selected', mode === 'inspect');
+            document.getElementById('generate-mode').style.display = mode === 'generate' ? 'block' : 'none';
+            document.getElementById('inspect-mode').style.display = mode === 'inspect' ? 'block' : 'none';
+            syncCategorySelects();
+            if(window.lucide) lucide.createIcons();
+        }
+
+        function handleInspectFile() {
+            const file = document.getElementById('inspect-file').files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                inspectImageSrc = ev.target.result;
+                const preview = document.getElementById('inspect-preview');
+                const img = document.getElementById('inspect-preview-img');
+                img.src = inspectImageSrc;
+                preview.style.display = 'block';
+                // Reset result
+                document.getElementById('inspect-result').style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function runInspection() {
+            if(!inspectImageSrc) { alert('이미지를 먼저 업로드해주세요.'); return; }
+            const btn = document.getElementById('inspect-btn');
+            const result = document.getElementById('inspect-result');
+            const cat = document.getElementById('inspect-cat').value || '';
+            const pastFB = (feedbackHistory[cat] || []).slice(-3).map(h => h.response).join('\n');
+
+            btn.disabled = true;
+            btn.textContent = '⏳ GEMS 점검 중...';
+            result.style.display = 'block';
+            result.innerHTML = '<p style="font-size:12px; color:#9ca3af; font-style:italic;">GEMS가 문서를 분석하고 있습니다...</p>';
+
+            const prompt = `이 이미지는 비나텍 사내 행사 보고서(계획안 또는 결과보고서)입니다.
+카테고리: ${cat || '미지정'}
+${pastFB ? '과거 피드백:\n' + pastFB : ''}
+
+아래 3가지 관점으로 이 문서를 점검하고, 각 항목별로 구체적인 피드백을 제시하세요.
+뻔한 일반론은 절대 금지. 비나텍 행사 실무에 맞는 날카롭고 구체적인 지적만 하세요.
+
+① Brand (브랜드 품격): 비나텍 로고/이름 표기, 디자인 완성도, 폰트·색상 통일성
+② Operation (운영 무결점): 일정 현실성, 인원 배치, 물품/예산 누락, 안전/동선 리스크
+③ Strategy (전략적 임팩트): 경영진 메시지 전달력, 직원 참여 유도, 다음 행사 연결성
+
+다음 JSON으로만 응답:
+{
+  "brand": [{"level":"good|warn|danger","text":"피드백"}],
+  "operation": [{"level":"good|warn|danger","text":"피드백"}],
+  "strategy": [{"level":"good|warn|danger","text":"피드백"}],
+  "overallScore": 85,
+  "topPriority": "가장 시급히 개선해야 할 한 가지"
+}`;
+
+            const inspectResult = await callGeminiVisionJSON(inspectImageSrc, prompt);
+
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="shield-check" style="width:18px;height:18px;display:inline;vertical-align:middle;margin-right:8px;"></i>GEMS 문서 점검 시작';
+
+            if(!inspectResult) {
+                result.innerHTML = '<div style="background:#fefce8; border:1px solid #fde68a; border-radius:12px; padding:14px; font-size:12px; font-weight:700; color:#92400e;">⚠️ 분석 실패. API 키를 확인하거나 잠시 후 다시 시도해주세요.</div>';
+                if(window.lucide) lucide.createIcons();
+                return;
+            }
+
+            const levelStyle = { good: 'background:#f0fdf4; border:1px solid #86efac; color:#166534;', warn: 'background:#fefce8; border:1px solid #fde68a; color:#92400e;', danger: 'background:#fef2f2; border:1px solid #fca5a5; color:#991b1b;' };
+            const levelIcon = { good: '✅', warn: '⚠️', danger: '🚨' };
+
+            const renderItems = (items) => (items||[]).map(item =>
+                `<div style="${levelStyle[item.level]||levelStyle.warn} border-radius:10px; padding:10px 14px; margin-bottom:6px; font-size:12px; font-weight:700; display:flex; gap:8px; align-items:flex-start;">
+                    <span style="flex-shrink:0;">${levelIcon[item.level]||'⚠️'}</span><span>${item.text}</span>
+                </div>`
+            ).join('');
+
+            const score = inspectResult.overallScore || 0;
+            const scoreColor = score >= 80 ? '#16a34a' : score >= 60 ? '#d97706' : '#dc2626';
+
+            result.innerHTML = `
+                <div style="display:flex; align-items:center; gap:16px; margin-bottom:20px; padding:16px 20px; background:#064e3b; border-radius:16px;">
+                    <div style="text-align:center; min-width:60px;">
+                        <div style="font-size:28px; font-weight:900; color:${scoreColor};">${score}</div>
+                        <div style="font-size:9px; color:#86efac; font-weight:800; letter-spacing:0.1em;">GEMS SCORE</div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px; color:#86efac; font-weight:800; margin-bottom:4px;">🚨 최우선 개선사항</div>
+                        <div style="font-size:13px; color:white; font-weight:700;">${inspectResult.topPriority || '-'}</div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:14px;">
+                    <div style="font-size:10px; font-weight:900; color:#064e3b; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                        <span style="background:#064e3b; color:white; padding:2px 8px; border-radius:5px; font-size:9px;">BRAND</span> 브랜드 품격
+                    </div>
+                    ${renderItems(inspectResult.brand)}
+                </div>
+
+                <div style="margin-bottom:14px;">
+                    <div style="font-size:10px; font-weight:900; color:#064e3b; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                        <span style="background:#064e3b; color:white; padding:2px 8px; border-radius:5px; font-size:9px;">OPERATION</span> 운영 무결점
+                    </div>
+                    ${renderItems(inspectResult.operation)}
+                </div>
+
+                <div style="margin-bottom:14px;">
+                    <div style="font-size:10px; font-weight:900; color:#064e3b; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                        <span style="background:#064e3b; color:white; padding:2px 8px; border-radius:5px; font-size:9px;">STRATEGY</span> 전략적 임팩트
+                    </div>
+                    ${renderItems(inspectResult.strategy)}
+                </div>
+            `;
             if(window.lucide) lucide.createIcons();
         }
 
