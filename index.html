@@ -113,13 +113,13 @@
                 <div style="width:56px; height:56px; background:#064e3b; border-radius:16px; display:flex; align-items:center; justify-content:center; margin:0 auto 14px;">
                     <i data-lucide="key" style="width:24px;height:24px;color:#bef264;"></i>
                 </div>
-                <h2 style="font-size:20px; font-weight:900; color:#064e3b; margin:0 0 6px;">GEMS API 연결</h2>
-                <p style="font-size:12px; color:#9ca3af; margin:0;">Gemini API 키를 입력하면 AI 기능이 활성화됩니다.<br>키는 이 브라우저에만 안전하게 저장됩니다.</p>
+                <h2 style="font-size:20px; font-weight:900; color:#064e3b; margin:0 0 6px;">Claude API 연결</h2>
+                <p style="font-size:12px; color:#9ca3af; margin:0;">Claude API 키를 입력하면 AI 기능이 활성화됩니다.<br>키는 이 브라우저에만 안전하게 저장됩니다.</p>
             </div>
             <div style="margin-bottom:16px;">
-                <label class="field-label">Gemini API Key</label>
+                <label class="field-label">Claude API Key</label>
                 <div class="key-input-wrap">
-                    <input type="password" id="apikey-input" class="field-input" placeholder="AIza...">
+                    <input type="password" id="apikey-input" class="field-input" placeholder="sk-ant-...">
                     <button class="key-toggle" onclick="toggleKeyVisibility()">
                         <i data-lucide="eye" style="width:16px;height:16px;"></i>
                     </button>
@@ -246,7 +246,7 @@
                                     <i data-lucide="bot" style="width:16px;height:16px;color:#bef264;"></i>
                                 </div>
                                 <div>
-                                    <p style="font-size:12px; font-weight:900; color:#064e3b; margin:0;">Gemini GEMS 비서</p>
+                                    <p style="font-size:12px; font-weight:900; color:#064e3b; margin:0;">Claude GEMS 비서</p>
                                     <p style="font-size:9px; color:#86efac; font-weight:700; margin:0;">AI 건의사항 분석 엔진</p>
                                 </div>
                             </div>
@@ -430,49 +430,63 @@
             if(!geminiKey) return null;
             try {
                 const res = await fetch(
-                    `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+                    'https://api.anthropic.com/v1/messages',
                     {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-api-key': geminiKey,
+                            'anthropic-version': '2023-06-01',
+                            'anthropic-dangerous-direct-browser-access': 'true'
+                        },
                         body: JSON.stringify({
-                            contents: [{ parts: [{ text: GEMS_SYSTEM + "\n\n질문: " + prompt }] }]
+                            model: 'claude-haiku-4-5-20251001',
+                            max_tokens: 1024,
+                            system: GEMS_SYSTEM,
+                            messages: [{ role: 'user', content: prompt }]
                         })
                     }
                 );
                 const data = await res.json();
-                if(data.error) { console.warn('Gemini error:', data.error); return null; }
-                return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+                if(data.error) { console.warn('Claude error:', data.error); return null; }
+                return data.content?.[0]?.text || null;
             } catch(e) { console.warn('API 호출 실패', e); return null; }
         }
 
         // ===== GEMINI VISION API CALL (image + text) =====
         async function callGeminiVision(base64Image, prompt) {
             if(!geminiKey) return null;
-            // Strip data URL prefix if present
             const imageData = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
-            // Detect mime type
             const mimeType = base64Image.startsWith('data:image/png') ? 'image/png' :
                              base64Image.startsWith('data:image/jpg') || base64Image.startsWith('data:image/jpeg') ? 'image/jpeg' :
                              'image/png';
             try {
                 const res = await fetch(
-                    `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+                    'https://api.anthropic.com/v1/messages',
                     {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-api-key': geminiKey,
+                            'anthropic-version': '2023-06-01',
+                            'anthropic-dangerous-direct-browser-access': 'true'
+                        },
                         body: JSON.stringify({
-                            contents: [{
-                                parts: [
-                                    { inline_data: { mime_type: mimeType, data: imageData } },
-                                    { text: prompt }
+                            model: 'claude-haiku-4-5-20251001',
+                            max_tokens: 1024,
+                            messages: [{
+                                role: 'user',
+                                content: [
+                                    { type: 'image', source: { type: 'base64', media_type: mimeType, data: imageData } },
+                                    { type: 'text', text: prompt }
                                 ]
                             }]
                         })
                     }
                 );
                 const data = await res.json();
-                if(data.error) { console.warn('Vision error:', data.error); return null; }
-                return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+                if(data.error) { console.warn('Claude Vision error:', data.error); return null; }
+                return data.content?.[0]?.text || null;
             } catch(e) { console.warn('Vision API 실패', e); return null; }
         }
 
@@ -504,7 +518,7 @@
             localStorage.setItem('v32_gemini_key', geminiKey);
             document.getElementById('apikey-modal').classList.remove('open');
             updateKeyStatus();
-            alert('✅ GEMS API 연결 완료! AI 기능이 활성화됩니다.');
+            alert('✅ Claude API 연결 완료! AI 기능이 활성화됩니다.');
         }
         function updateKeyStatus() {
             const badge = document.getElementById('sidebar-key-badge');
@@ -513,7 +527,7 @@
             if(geminiKey) {
                 badge.className = 'key-status-badge connected';
                 dot.style.background = '#16a34a';
-                text.textContent = 'GEMS 연결됨';
+                text.textContent = 'Claude 연결됨';
             } else {
                 badge.className = 'key-status-badge disconnected';
                 dot.style.background = '#dc2626';
