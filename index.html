@@ -800,102 +800,80 @@ ${pastFeedbacks ? `\n과거 피드백 히스토리:\n${pastFeedbacks}\n` : ''}
             const visionContent = document.getElementById('vision-analysis-content');
             visionArea.style.display = 'block';
 
-            // Show progress UI
             visionContent.innerHTML = `
                 <div class="vision-progress">
                     <div class="vision-step active" id="vstep-1">
                         <div class="step-icon active">👁</div>
-                        <span>이미지 구조 분석 중...</span>
+                        <span>이미지 텍스트 및 내용 추출 중...</span>
                     </div>
                     <div class="vision-step" id="vstep-2">
-                        <div class="step-icon">📐</div>
-                        <span>레이아웃 패턴 추출</span>
+                        <div class="step-icon">📋</div>
+                        <span>표·일정·항목 구조화</span>
                     </div>
                     <div class="vision-step" id="vstep-3">
                         <div class="step-icon">🎨</div>
-                        <span>PPT 슬라이드 구조 설계</span>
+                        <span>PPT 슬라이드 설계 완료</span>
                     </div>
                 </div>
             `;
 
-            const visionPrompt = `이 이미지는 회사 행사 보고서 또는 발표 자료입니다.
-이미지를 분석하여 PPT 슬라이드 재현에 필요한 레이아웃 정보를 추출해주세요.
+            const visionPrompt = `이 이미지는 회사 행사 보고서 문서입니다. 이미지에서 모든 텍스트 내용을 읽고 PPT 슬라이드로 재구성하기 위한 구조화된 데이터를 추출해주세요.
 
 다음 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
 {
-  "layoutType": "cover|content|table|chart|image-left|image-right|full-image|split|text-only",
-  "hasTitle": true,
-  "hasSectionHeaders": true,
-  "hasTable": false,
-  "hasChart": false,
-  "hasImage": true,
-  "imagePosition": "left|right|top|bottom|center|background|none",
-  "colorScheme": "dark|light|colorful",
-  "dominantColor": "#064e3b",
-  "accentColor": "#bef264",
-  "textColor": "#ffffff",
-  "columns": 1,
-  "keyElements": ["제목 영역", "로고", "날짜", "본문 텍스트 블록"],
-  "slideStructure": "표지|목차|본문|결과|마무리",
-  "detectedTexts": ["감지된 텍스트1", "감지된 텍스트2"],
-  "layoutDescription": "전체 레이아웃에 대한 한국어 설명 1~2문장"
-}`;
+  "docTitle": "문서 제목",
+  "sections": [
+    {
+      "heading": "섹션 제목 (예: 개요, 주요일정, 세부내용 등)",
+      "type": "text|table|list|schedule",
+      "content": ["항목1", "항목2"],
+      "tableData": {
+        "headers": ["열1", "열2", "열3"],
+        "rows": [["값1","값2","값3"], ["값4","값5","값6"]]
+      }
+    }
+  ],
+  "keyFacts": ["핵심사실1 (예: 참여인원 70명)", "핵심사실2", "핵심사실3"],
+  "summary": "전체 문서 내용 2~3줄 요약"
+}
+tableData는 표가 있는 섹션에만 포함하세요. content는 표가 아닌 텍스트/목록 내용입니다.`;
 
             const result = await callGeminiVisionJSON(imgSrc, visionPrompt);
 
-            // Update progress steps
             document.getElementById('vstep-1').className = 'vision-step done';
             document.getElementById('vstep-1').querySelector('.step-icon').className = 'step-icon done';
             document.getElementById('vstep-1').querySelector('.step-icon').textContent = '✓';
             document.getElementById('vstep-2').className = 'vision-step active';
             document.getElementById('vstep-2').querySelector('.step-icon').className = 'step-icon active';
-
-            await new Promise(r => setTimeout(r, 600));
-
+            await new Promise(r => setTimeout(r, 500));
             document.getElementById('vstep-2').className = 'vision-step done';
             document.getElementById('vstep-2').querySelector('.step-icon').className = 'step-icon done';
             document.getElementById('vstep-2').querySelector('.step-icon').textContent = '✓';
             document.getElementById('vstep-3').className = 'vision-step active';
             document.getElementById('vstep-3').querySelector('.step-icon').className = 'step-icon active';
-
-            await new Promise(r => setTimeout(r, 400));
-
+            await new Promise(r => setTimeout(r, 300));
             document.getElementById('vstep-3').className = 'vision-step done';
             document.getElementById('vstep-3').querySelector('.step-icon').className = 'step-icon done';
             document.getElementById('vstep-3').querySelector('.step-icon').textContent = '✓';
 
             if(result) {
                 visionLayoutData = result;
-                const elements = (result.keyElements || []).map(el => `<span class="layout-tag">${el}</span>`).join('');
+                const sectionTags = (result.sections || []).map(s => `<span class="layout-tag">${s.heading}</span>`).join('');
+                const factTags = (result.keyFacts || []).map(f => `<span style="font-size:11px; color:#166534; font-weight:700; display:block; margin-bottom:4px;">• ${f}</span>`).join('');
                 visionContent.innerHTML = `
                     <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:16px; padding:18px 20px;">
-                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
                             <span style="font-size:18px;">🔍</span>
-                            <span style="font-size:13px; font-weight:800; color:#064e3b;">Vision 분석 완료</span>
+                            <span style="font-size:13px; font-weight:800; color:#064e3b;">내용 추출 완료 — ${result.sections?.length || 0}개 섹션 감지</span>
                         </div>
-                        <p style="font-size:12px; color:#166534; font-weight:700; margin:0 0 12px; line-height:1.6;">${result.layoutDescription || '레이아웃 분석이 완료되었습니다.'}</p>
+                        <p style="font-size:12px; color:#166534; margin:0 0 10px; line-height:1.6;">${result.summary || ''}</p>
                         <div style="margin-bottom:10px;">
-                            <span style="font-size:10px; font-weight:800; color:#16a34a; text-transform:uppercase; letter-spacing:0.08em;">감지된 레이아웃 요소</span>
-                            <div style="margin-top:6px;">${elements || '<span class="layout-tag">기본 레이아웃</span>'}</div>
+                            <span style="font-size:10px; font-weight:800; color:#16a34a; text-transform:uppercase; letter-spacing:0.08em;">감지된 섹션</span>
+                            <div style="margin-top:6px;">${sectionTags || '<span class="layout-tag">기본</span>'}</div>
                         </div>
-                        <div style="display:flex; gap:16px; margin-top:12px;">
-                            <div style="display:flex; align-items:center; gap:6px;">
-                                <div style="width:16px; height:16px; border-radius:4px; background:${result.dominantColor || '#064e3b'}; border:1px solid #dcfce7;"></div>
-                                <span style="font-size:10px; font-weight:700; color:#6b7280;">주색상</span>
-                            </div>
-                            <div style="display:flex; align-items:center; gap:6px;">
-                                <div style="width:16px; height:16px; border-radius:4px; background:${result.accentColor || '#bef264'}; border:1px solid #dcfce7;"></div>
-                                <span style="font-size:10px; font-weight:700; color:#6b7280;">강조색</span>
-                            </div>
-                            <div style="font-size:10px; font-weight:700; color:#6b7280; display:flex; align-items:center;">
-                                레이아웃: <strong style="color:#064e3b; margin-left:4px;">${result.layoutType || 'content'}</strong>
-                            </div>
-                            <div style="font-size:10px; font-weight:700; color:#6b7280; display:flex; align-items:center;">
-                                컬럼: <strong style="color:#064e3b; margin-left:4px;">${result.columns || 1}단</strong>
-                            </div>
-                        </div>
-                        <div style="margin-top:10px; padding:8px 12px; background:#dcfce7; border-radius:10px;">
-                            <span style="font-size:11px; font-weight:700; color:#064e3b;">✅ 이 레이아웃을 기반으로 PPT가 생성됩니다</span>
+                        ${factTags ? `<div style="margin-top:10px; padding:10px 14px; background:#dcfce7; border-radius:10px;">${factTags}</div>` : ''}
+                        <div style="margin-top:10px; padding:8px 12px; background:#064e3b; border-radius:10px;">
+                            <span style="font-size:11px; font-weight:700; color:#bef264;">✅ 추출된 내용으로 PPT 텍스트가 재구성됩니다</span>
                         </div>
                     </div>
                 `;
@@ -903,7 +881,7 @@ ${pastFeedbacks ? `\n과거 피드백 히스토리:\n${pastFeedbacks}\n` : ''}
                 visionLayoutData = null;
                 visionContent.innerHTML = `
                     <div style="background:#fefce8; border:1px solid #fde68a; border-radius:16px; padding:16px 20px; font-size:12px; font-weight:700; color:#92400e;">
-                        ⚠️ Vision 분석을 사용할 수 없습니다 (API 키 미설정 또는 오류). 기본 템플릿으로 PPT가 생성됩니다.
+                        ⚠️ 내용 추출 실패. API 키를 확인하거나 잠시 후 다시 시도해주세요.
                     </div>
                 `;
             }
@@ -997,25 +975,19 @@ ${pastFB ? `과거 AI 피드백:\n${pastFB}` : ''}
                 postRecommend = parsed.postRecommend || [];
             }
 
-            statusEl.textContent = 'Vision 레이아웃 기반 PPT 슬라이드 생성 중...';
+            statusEl.textContent = '추출된 내용으로 PPT 슬라이드 생성 중...';
 
-            // Use vision data if available, otherwise defaults
-            const layout = visionLayoutData || {};
-            const BG = (layout.dominantColor || '#064e3b').replace('#','');
-            const ACCENT = (layout.accentColor || '#bef264').replace('#','');
+            const BG = '064e3b';
+            const ACCENT = 'bef264';
             const WHITE = 'FFFFFF';
             const LIGHT = 'ecfccb';
             const MID = 'dcfce7';
             const DARK = '053d2e';
-            const layoutType = layout.layoutType || 'content';
-            const hasTable = layout.hasTable || false;
-            const imgPos = layout.imagePosition || 'left';
-            const columns = layout.columns || 1;
 
             const pptx = new PptxGenJS();
             pptx.layout = 'LAYOUT_16x9';
 
-            // ===== SLIDE 1: Cover (always based on vision color scheme) =====
+            // ===== SLIDE 1: 표지 =====
             const s1 = pptx.addSlide();
             s1.background = { color: BG };
             s1.addShape(pptx.ShapeType.rect, { x:0, y:0, w:0.25, h:5.63, fill:{color:ACCENT} });
@@ -1026,73 +998,84 @@ ${pastFB ? `과거 AI 피드백:\n${pastFB}` : ''}
             if(loc) s1.addText('📍 '+loc+(partner ? '   |   🤝 '+partner : ''), { x:0.55, y:3.9, w:9, h:0.45, color:LIGHT, fontSize:13, fontFace:'Malgun Gothic' });
             s1.addText(e.date+'   '+new Date().toLocaleDateString('ko-KR'), { x:0.55, y:5.05, w:9, h:0.35, color:ACCENT, fontSize:11, fontFace:'Malgun Gothic' });
 
-            // ===== SLIDE 2: Main content - layout adapted from Vision analysis =====
-            const s2 = pptx.addSlide();
-            s2.background = { color: LIGHT };
-            s2.addShape(pptx.ShapeType.rect, { x:0, y:0, w:10, h:0.9, fill:{color:BG} });
-            s2.addText(typeLabel+' 주요 내용', { x:0.4, y:0.1, w:9, h:0.7, color:WHITE, fontSize:20, bold:true, fontFace:'Malgun Gothic' });
+            // ===== SLIDE 2: 개요/요약 (Vision 추출 내용 기반) =====
+            const extracted = visionLayoutData;
+            if(extracted && extracted.sections && extracted.sections.length > 0) {
 
-            if(imgSrc) {
-                // Adapt image position based on vision analysis
-                if(imgPos === 'right') {
-                    // Image on right, text on left
-                    if(aiPoints.length > 0) {
-                        const rows = aiPoints.map((pt,i) => [
-                            { text:`0${i+1}`, options:{color:ACCENT,bold:true,fontSize:12,fontFace:'Malgun Gothic',fill:BG} },
-                            { text:pt, options:{color:'166534',fontSize:11,fontFace:'Malgun Gothic',fill:WHITE} }
-                        ]);
-                        s2.addTable(rows, { x:0.3, y:1.1, w:4.5, h:4.2, colW:[0.5,4.0], border:{color:MID}, rowH:0.9 });
-                    }
-                    s2.addImage({ data:imgSrc, x:5.1, y:1.1, w:4.6, h:4.2, sizing:{type:'contain',w:4.6,h:4.2} });
-                } else if(imgPos === 'top') {
-                    // Image on top, text below
-                    s2.addImage({ data:imgSrc, x:0.3, y:1.0, w:9.4, h:2.5, sizing:{type:'contain',w:9.4,h:2.5} });
-                    if(aiPoints.length > 0) {
-                        const pointsText = aiPoints.map((pt,i) => `${i+1}. ${pt}`).join('\n');
-                        s2.addText(pointsText, { x:0.3, y:3.7, w:9.4, h:1.7, color:'166534', fontSize:11, fontFace:'Malgun Gothic', wrap:true, valign:'top', lineSpacingMultiple:1.4 });
-                    }
-                } else if(imgPos === 'background') {
-                    // Image as background with text overlay
-                    s2.addImage({ data:imgSrc, x:0, y:0, w:10, h:5.63, sizing:{type:'cover',w:10,h:5.63} });
-                    s2.addShape(pptx.ShapeType.rect, { x:0, y:0, w:10, h:5.63, fill:{color:'000000', transparency:50} });
-                    if(aiPoints.length > 0) {
-                        const pointsText = aiPoints.map((pt,i) => `${i+1}. ${pt}`).join('\n');
-                        s2.addText(pointsText, { x:0.5, y:1.2, w:9, h:4, color:WHITE, fontSize:14, fontFace:'Malgun Gothic', wrap:true, bold:true, lineSpacingMultiple:1.6 });
-                    }
-                } else {
-                    // Default: image left, table right
-                    s2.addImage({ data:imgSrc, x:0.3, y:1.1, w:5.2, h:4.2, sizing:{type:'contain',w:5.2,h:4.2} });
-                    if(aiPoints.length > 0) {
-                        const rows = aiPoints.map((pt,i) => [
-                            { text:`0${i+1}`, options:{color:ACCENT,bold:true,fontSize:12,fontFace:'Malgun Gothic',fill:BG} },
-                            { text:pt, options:{color:'166534',fontSize:11,fontFace:'Malgun Gothic',fill:WHITE} }
-                        ]);
-                        s2.addTable(rows, { x:5.8, y:1.1, w:3.9, h:4.2, colW:[0.5,3.4], border:{color:MID}, rowH:0.9 });
+                // ===== 섹션별 슬라이드 생성 =====
+                for(const section of extracted.sections) {
+                    const sSlide = pptx.addSlide();
+                    sSlide.background = { color: LIGHT };
+                    sSlide.addShape(pptx.ShapeType.rect, { x:0, y:0, w:10, h:0.9, fill:{color:BG} });
+                    sSlide.addText(section.heading || '내용', { x:0.4, y:0.1, w:9, h:0.7, color:WHITE, fontSize:20, bold:true, fontFace:'Malgun Gothic' });
+
+                    if(section.type === 'table' && section.tableData && section.tableData.headers) {
+                        // 표 슬라이드
+                        const headers = section.tableData.headers;
+                        const rows = section.tableData.rows || [];
+                        const tableRows = [
+                            headers.map(h => ({ text: h, options: { bold:true, color:WHITE, fill:BG, fontSize:11, fontFace:'Malgun Gothic', align:'center' } })),
+                            ...rows.map((row, ri) => row.map(cell => ({
+                                text: String(cell || ''),
+                                options: { fontSize:10, fontFace:'Malgun Gothic', fill: ri%2===0 ? WHITE : 'f0fdf4', color:'166534' }
+                            })))
+                        ];
+                        const colW = Math.min(9.4 / Math.max(headers.length, 1), 3);
+                        const colWidths = headers.map(() => colW);
+                        try {
+                            sSlide.addTable(tableRows, { x:0.3, y:1.1, w:9.4, colW:colWidths, border:{color:MID}, rowH:0.45 });
+                        } catch(te) {
+                            const fallbackText = rows.map(r => r.join(' | ')).join('\n');
+                            sSlide.addText(fallbackText, { x:0.3, y:1.1, w:9.4, h:4.2, color:'166534', fontSize:11, fontFace:'Malgun Gothic', wrap:true, valign:'top' });
+                        }
+                    } else if(section.type === 'schedule') {
+                        // 일정 슬라이드 - 목록 형태
+                        const items = (section.content || []).map((item, i) => `${i+1}. ${item}`).join('\n\n');
+                        sSlide.addText(items, { x:0.5, y:1.1, w:9, h:4.2, color:'166534', fontSize:13, fontFace:'Malgun Gothic', wrap:true, valign:'top', lineSpacingMultiple:1.5 });
+                    } else {
+                        // 일반 텍스트/목록 슬라이드
+                        const items = section.content || [];
+                        if(items.length > 0) {
+                            const bulletRows = items.map((item, i) => [
+                                { text:`${i+1}`, options:{color:ACCENT, bold:true, fontSize:13, fontFace:'Malgun Gothic', fill:BG, align:'center'} },
+                                { text:String(item), options:{color:'166534', fontSize:12, fontFace:'Malgun Gothic', fill:WHITE, wrap:true} }
+                            ]);
+                            const rowH = Math.min(4.2 / Math.max(items.length, 1), 1.0);
+                            try {
+                                sSlide.addTable(bulletRows, { x:0.3, y:1.1, w:9.4, colW:[0.5, 8.9], border:{color:MID}, rowH:rowH });
+                            } catch(te) {
+                                sSlide.addText(items.join('\n'), { x:0.3, y:1.1, w:9.4, h:4.2, color:'166534', fontSize:12, fontFace:'Malgun Gothic', wrap:true });
+                            }
+                        }
                     }
                 }
+
+                // 핵심 사실 슬라이드 (keyFacts가 있으면)
+                if(extracted.keyFacts && extracted.keyFacts.length > 0) {
+                    const sFacts = pptx.addSlide();
+                    sFacts.background = { color: BG };
+                    sFacts.addShape(pptx.ShapeType.rect, { x:0, y:0, w:10, h:0.9, fill:{color:DARK} });
+                    sFacts.addText('핵심 현황', { x:0.4, y:0.1, w:9, h:0.7, color:ACCENT, fontSize:20, bold:true, fontFace:'Malgun Gothic' });
+                    const factsText = extracted.keyFacts.map((f,i) => `${i+1}. ${f}`).join('\n\n');
+                    sFacts.addText(factsText, { x:0.6, y:1.1, w:8.8, h:4.0, color:WHITE, fontSize:16, fontFace:'Malgun Gothic', wrap:true, valign:'top', lineSpacingMultiple:1.6 });
+                }
+
             } else {
-                // No image - text only or table layout
-                s2.addShape(pptx.ShapeType.rect, { x:0.3, y:1.1, w:5.2, h:4.2, fill:{color:MID}, line:{color:ACCENT,width:1} });
-                s2.addText('이미지 없음\n(통합 행사 관리에서 업로드하세요)', { x:0.3, y:2.5, w:5.2, h:1, color:'aaaaaa', fontSize:11, align:'center', fontFace:'Malgun Gothic', wrap:true });
+                // Vision 추출 실패 시 기본 슬라이드
+                const s2 = pptx.addSlide();
+                s2.background = { color: LIGHT };
+                s2.addShape(pptx.ShapeType.rect, { x:0, y:0, w:10, h:0.9, fill:{color:BG} });
+                s2.addText(typeLabel+' 주요 내용', { x:0.4, y:0.1, w:9, h:0.7, color:WHITE, fontSize:20, bold:true, fontFace:'Malgun Gothic' });
                 if(aiPoints.length > 0) {
                     const rows = aiPoints.map((pt,i) => [
                         { text:`0${i+1}`, options:{color:ACCENT,bold:true,fontSize:12,fontFace:'Malgun Gothic',fill:BG} },
                         { text:pt, options:{color:'166534',fontSize:11,fontFace:'Malgun Gothic',fill:WHITE} }
                     ]);
-                    s2.addTable(rows, { x:5.8, y:1.1, w:3.9, h:4.2, colW:[0.5,3.4], border:{color:MID}, rowH:0.9 });
+                    s2.addTable(rows, { x:0.3, y:1.1, w:9.4, colW:[0.5,8.9], border:{color:MID}, rowH:0.9 });
                 }
             }
 
-            // ===== SLIDE 3: Table slide if vision detected a table, else improvements =====
-            if(hasTable && imgSrc) {
-                const s3 = pptx.addSlide();
-                s3.background = { color: LIGHT };
-                s3.addShape(pptx.ShapeType.rect, { x:0, y:0, w:10, h:0.9, fill:{color:BG} });
-                s3.addText('세부 현황', { x:0.4, y:0.1, w:9, h:0.7, color:WHITE, fontSize:20, bold:true, fontFace:'Malgun Gothic' });
-                s3.addImage({ data:imgSrc, x:0.3, y:1.1, w:9.4, h:4.2, sizing:{type:'contain',w:9.4,h:4.2} });
-            }
-
-            // ===== SLIDE: Improvements =====
+            // ===== 개선사항 슬라이드 =====
             const sImp = pptx.addSlide();
             sImp.background = { color: BG };
             sImp.addShape(pptx.ShapeType.rect, { x:0, y:0, w:10, h:0.9, fill:{color:DARK} });
@@ -1104,7 +1087,7 @@ ${pastFB ? `과거 AI 피드백:\n${pastFB}` : ''}
                 : ['· AI 피드백 탭에서 건의사항을 입력하면 자동 반영됩니다.'];
             sImp.addText(allImprovements.join('\n\n'), { x:0.6, y:1.1, w:8.8, h:4.2, color:WHITE, fontSize:14, fontFace:'Malgun Gothic', valign:'top', wrap:true, lineSpacingMultiple:1.5 });
 
-            // ===== SLIDE: Close =====
+            // ===== 마무리 슬라이드 =====
             const sEnd = pptx.addSlide();
             sEnd.background = { color: LIGHT };
             sEnd.addShape(pptx.ShapeType.rect, { x:3.5, y:1.5, w:3, h:2.5, fill:{color:BG} });
