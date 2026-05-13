@@ -417,7 +417,7 @@ async function callGemini(prompt) {
     if(!geminiKey) return null;
     try {
         const res = await fetch(
-            `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+            `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -471,7 +471,7 @@ async function callGemini(prompt) {
     const val = document.getElementById('apikey-input').value.trim();
     if(!val) { alert('API 키를 입력해주세요.'); return; }
     
-    fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${val}`, {
+    fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${val}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: [{ parts: [{ text: 'test' }] }] })
@@ -521,7 +521,7 @@ async function callGemini(prompt) {
     const val = document.getElementById('apikey-input').value.trim();
     if(!val) { alert('API 키를 입력해주세요.'); return; }
     
-    fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${val}`, {
+    fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${val}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: [{ parts: [{ text: 'test' }] }] })
