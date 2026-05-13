@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>비나텍 전략 관리 시스템 v32</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@0.383.0/dist/umd/lucide.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&display=swap');
@@ -76,7 +76,6 @@
         .img-preview-box { width: 100%; height: 200px; background: #f0fdf4; border-radius: 14px; border: 1px solid #dcfce7; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         .img-preview-box img { width: 100%; height: 100%; object-fit: contain; }
 
-        /* Pre/Post analysis cards */
         .analysis-card { border-radius: 16px; padding: 18px 20px; margin-bottom: 12px; animation: fadeIn 0.3s ease; }
         .analysis-card.warn { background: #fefce8; border: 1px solid #fde68a; }
         .analysis-card.info { background: #eff6ff; border: 1px solid #bfdbfe; }
@@ -84,7 +83,6 @@
         .rec-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid #dcfce7; }
         .rec-item:last-child { border-bottom: none; }
 
-        /* API Key setup modal */
         #apikey-modal .modal-box { width: 440px; }
         .key-input-wrap { position: relative; }
         .key-input-wrap input { padding-right: 44px; letter-spacing: 0.05em; }
@@ -92,11 +90,23 @@
         .key-status-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; padding: 5px 12px; border-radius: 20px; }
         .key-status-badge.connected { background: #dcfce7; color: #16a34a; }
         .key-status-badge.disconnected { background: #fee2e2; color: #dc2626; }
+
+        /* Vision analysis progress */
+        .vision-progress { background: #f0fdf4; border: 1px solid #86efac; border-radius: 16px; padding: 20px 24px; margin-bottom: 16px; }
+        .vision-step { display: flex; align-items: center; gap: 12px; padding: 8px 0; font-size: 13px; font-weight: 700; color: #6b7280; }
+        .vision-step.active { color: #064e3b; }
+        .vision-step.done { color: #16a34a; }
+        .step-icon { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #dcfce7; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 10px; }
+        .step-icon.active { border-color: #16a34a; background: #dcfce7; animation: pulse 1.5s infinite; }
+        .step-icon.done { border-color: #16a34a; background: #16a34a; color: white; }
+
+        /* Layout analysis result */
+        .layout-tag { display: inline-block; background: #064e3b; color: #bef264; font-size: 10px; font-weight: 800; padding: 4px 10px; border-radius: 6px; margin: 3px; letter-spacing: 0.05em; }
     </style>
 </head>
 <body>
 
-    <!-- ===== API KEY SETUP MODAL (First Run) ===== -->
+    <!-- ===== API KEY SETUP MODAL ===== -->
     <div id="apikey-modal" class="modal-overlay">
         <div class="modal-box" style="width:440px;">
             <div style="text-align:center; margin-bottom:24px;">
@@ -143,7 +153,6 @@
                 <i data-lucide="presentation"></i> 보고서 생성
             </div>
         </nav>
-        <!-- API Key status at bottom -->
         <div style="margin-top:auto; padding-top:20px; border-top:1px solid rgba(255,255,255,0.08);">
             <div id="sidebar-key-status" style="font-size:10px; font-weight:800; color:#4d7c60; margin-bottom:8px; letter-spacing:0.06em; text-transform:uppercase;">GEMS 연결 상태</div>
             <div id="sidebar-key-badge" class="key-status-badge disconnected">
@@ -258,7 +267,7 @@
                         <i data-lucide="cpu" style="width:14px;height:14px;color:#16a34a;"></i>
                         <span style="font-size:10px; font-weight:900; letter-spacing:0.1em; color:#16a34a; text-transform:uppercase;">Report Intelligence</span>
                     </div>
-                    <p style="font-size:12px; color:#9ca3af; margin:0 0 24px;">통합 행사 관리에 저장된 이미지를 기반으로 GEMS가 지능형 PPT를 생성합니다.</p>
+                    <p style="font-size:12px; color:#9ca3af; margin:0 0 24px;">업로드한 이미지를 GEMS가 분석하여 레이아웃 구조를 파악한 뒤, 유사한 형태의 PPT를 생성합니다.</p>
 
                     <div style="margin-bottom:20px;">
                         <label class="field-label">① 보고서 기반 카테고리</label>
@@ -292,6 +301,12 @@
                         <div id="pre-analysis-content"></div>
                     </div>
 
+                    <!-- ⑥ VISION LAYOUT ANALYSIS -->
+                    <div id="vision-analysis-area" style="display:none; margin-bottom:20px;">
+                        <label class="field-label">⑥ GEMS Vision 레이아웃 분석</label>
+                        <div id="vision-analysis-content"></div>
+                    </div>
+
                     <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:20px;">
                         <div>
                             <label class="field-label">보고서 타이틀</label>
@@ -313,7 +328,7 @@
                     </button>
                     <div id="gen-status" style="display:none; text-align:center; font-size:13px; font-weight:700; color:#16a34a; margin-top:12px;"></div>
 
-                    <!-- ⑥ POST-GENERATION FEEDBACK -->
+                    <!-- ⑦ POST-GENERATION FEEDBACK -->
                     <div id="post-analysis-area" style="display:none; margin-top:28px; padding-top:24px; border-top:1px solid #dcfce7;">
                         <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
                             <i data-lucide="sparkles" style="width:15px;height:15px;color:#16a34a;"></i>
@@ -403,90 +418,94 @@
         let activeId = null;
         let selectedReportType = 'plan';
         let selectedReportEventId = null;
+        let visionLayoutData = null; // stores analyzed layout from Gemini Vision
 
-        // GEMS persona — system instruction for all API calls
         const GEMS_SYSTEM = `당신은 비나텍(Vinatech)의 전략 문화 비서 GEMS입니다.
 비나텍은 전기이중층 커패시터(EDLC) 전문 제조기업으로, 사내 문화행사(마라톤, 수요아카데미, 가정의 달 행사, 교육 등)를 기획·운영합니다.
 항상 실무적이고 구체적인 조언을 드리며, 과거 피드백 히스토리를 반드시 참고하여 같은 실수가 반복되지 않도록 경고해주세요.
 응답은 항상 한국어로, 간결하고 번호를 붙여서 제시하세요.`;
 
-        // ===== GEMINI API CALL =====
-// ===== GEMINI API CALL =====
-// ===== GEMINI API CALL =====
-async function callGemini(prompt) {
-    if(!geminiKey) return null;
-    try {
-        const res = await fetch(
-            `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [
-                        {
-                            parts: [
-                                { text: GEMS_SYSTEM + "\n\n질문: " + prompt }
-                            ]
-                        }
-                    ]
-                })
-            }
-        );
-
-        const data = await res.json();
-        console.log("Gemini 응답:", data); 
-
-        if(data.error) { 
-            console.warn('Gemini error:', data.error); 
-            return null; 
+        // ===== GEMINI API CALL (text) =====
+        async function callGemini(prompt) {
+            if(!geminiKey) return null;
+            try {
+                const res = await fetch(
+                    `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: GEMS_SYSTEM + "\n\n질문: " + prompt }] }]
+                        })
+                    }
+                );
+                const data = await res.json();
+                if(data.error) { console.warn('Gemini error:', data.error); return null; }
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+            } catch(e) { console.warn('API 호출 실패', e); return null; }
         }
-        
-        return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
 
-    } catch(e) { 
-        console.warn('API 호출 실패', e); 
-        return null; 
-    }
-}
+        // ===== GEMINI VISION API CALL (image + text) =====
+        async function callGeminiVision(base64Image, prompt) {
+            if(!geminiKey) return null;
+            // Strip data URL prefix if present
+            const imageData = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
+            // Detect mime type
+            const mimeType = base64Image.startsWith('data:image/png') ? 'image/png' :
+                             base64Image.startsWith('data:image/jpg') || base64Image.startsWith('data:image/jpeg') ? 'image/jpeg' :
+                             'image/png';
+            try {
+                const res = await fetch(
+                    `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [
+                                    { inline_data: { mime_type: mimeType, data: imageData } },
+                                    { text: prompt }
+                                ]
+                            }]
+                        })
+                    }
+                );
+                const data = await res.json();
+                if(data.error) { console.warn('Vision error:', data.error); return null; }
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+            } catch(e) { console.warn('Vision API 실패', e); return null; }
+        }
 
         async function callGeminiJSON(prompt) {
             const raw = await callGemini(prompt);
             if(!raw) return null;
-            try {
-                return JSON.parse(raw.replace(/```json|```/g, '').trim());
-            } catch(e) { return null; }
+            try { return JSON.parse(raw.replace(/```json|```/g, '').trim()); }
+            catch(e) { return null; }
+        }
+
+        async function callGeminiVisionJSON(base64Image, prompt) {
+            const raw = await callGeminiVision(base64Image, prompt);
+            if(!raw) return null;
+            try { return JSON.parse(raw.replace(/```json|```/g, '').trim()); }
+            catch(e) { return null; }
         }
 
         // ===== API KEY SETUP =====
         function openApiKeyModal() { document.getElementById('apikey-modal').classList.add('open'); }
-        function skipApiKey() {
-            document.getElementById('apikey-modal').classList.remove('open');
-            updateKeyStatus();
-        }
+        function skipApiKey() { document.getElementById('apikey-modal').classList.remove('open'); updateKeyStatus(); }
         function toggleKeyVisibility() {
             const inp = document.getElementById('apikey-input');
             inp.type = inp.type === 'password' ? 'text' : 'password';
         }
         function saveApiKey() {
-    const val = document.getElementById('apikey-input').value.trim();
-    if(!val) { alert('API 키를 입력해주세요.'); return; }
-    
-    fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${val}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: 'test' }] }] })
-    }).then(res => {
-        if(res.ok) {
+            const val = document.getElementById('apikey-input').value.trim();
+            if(!val) { alert('API 키를 입력해주세요.'); return; }
             geminiKey = val;
             localStorage.setItem('v32_gemini_key', geminiKey);
             document.getElementById('apikey-modal').classList.remove('open');
             updateKeyStatus();
-            alert('✅ GEMS API 연결에 성공했습니다!');
-        } else {
-            alert('❌ 유효하지 않은 API 키입니다.');
+            alert('✅ GEMS API 연결 완료! AI 기능이 활성화됩니다.');
         }
-    }).catch(() => alert('네트워크 연결을 확인해주세요.'));
-}
         function updateKeyStatus() {
             const badge = document.getElementById('sidebar-key-badge');
             const dot = document.getElementById('sidebar-key-dot');
@@ -513,20 +532,21 @@ async function callGemini(prompt) {
             syncCategorySelects();
             if(id === 'ai') loadFeedbackHistory();
             if(id === 'report') loadReportEvents();
-            lucide.createIcons();
+            if(window.lucide) lucide.createIcons();
         }
 
-// ===== CATEGORY SYNC =====
-function syncCategorySelects() {
-    ['filter-cat', 'm-cat', 'ai-cat', 'report-cat'].forEach(id => {
-        const el = document.getElementById(id);
-        if(!el) return;
-        const cur = el.value;
-        el.innerHTML = (id === 'filter-cat' ? '<option value="">전체 카테고리</option>' : '') +
-            categories.map(c => `<option value="${c}">${c}</option>`).join('');
-        if(cur && categories.includes(cur)) el.value = cur;
-    });
-}
+        // ===== CATEGORY SYNC =====
+        function syncCategorySelects() {
+            ['filter-cat', 'm-cat', 'ai-cat', 'report-cat'].forEach(id => {
+                const el = document.getElementById(id);
+                if(!el) return;
+                const cur = el.value;
+                el.innerHTML = (id === 'filter-cat' ? '<option value="">전체 카테고리</option>' : '') +
+                    categories.map(c => `<option value="${c}">${c}</option>`).join('');
+                if(cur && categories.includes(cur)) el.value = cur;
+            });
+        }
+
         // ===== RENDER EVENTS =====
         function renderEvents() {
             syncCategorySelects();
@@ -559,7 +579,7 @@ function syncCategorySelects() {
                     </div>
                 </div>
             `).join('');
-            lucide.createIcons();
+            if(window.lucide) lucide.createIcons();
         }
 
         // ===== EVENT MODAL =====
@@ -579,7 +599,7 @@ function syncCategorySelects() {
             setImg('m-p-img', 'm-p-empty', e.planImg);
             setImg('m-r-img', 'm-r-empty', e.resultImg);
             document.getElementById('modal').classList.add('open');
-            lucide.createIcons();
+            if(window.lucide) lucide.createIcons();
         }
         function closeModal() { document.getElementById('modal').classList.remove('open'); }
         function handleFile(type) {
@@ -627,7 +647,7 @@ function syncCategorySelects() {
                     <button class="btn-danger" onclick="deleteCat(${i})"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>
                 </div>
             `).join('');
-            lucide.createIcons();
+            if(window.lucide) lucide.createIcons();
         }
         function addNewCategory() {
             const v = document.getElementById('new-cat-input').value.trim();
@@ -666,25 +686,18 @@ function syncCategorySelects() {
             const input = document.getElementById('ai-input').value.trim();
             const cat = document.getElementById('ai-cat').value;
             if(!input) { alert('내용을 입력해주세요.'); return; }
-
             const responseArea = document.getElementById('ai-response-area');
             responseArea.innerHTML = `<div class="ai-bubble"><p style="font-size:12px; color:#86efac; margin:0;">GEMS가 분석 중입니다...</p></div>`;
-
             const pastFeedbacks = (feedbackHistory[cat] || []).slice(-3)
                 .map(h => `[과거 입력] ${h.input}\n[GEMS 응답] ${h.response}`).join('\n\n');
-
             const prompt = `카테고리: ${cat}
 ${pastFeedbacks ? `\n과거 피드백 히스토리:\n${pastFeedbacks}\n` : ''}
 현재 입력: ${input}
-
 위 내용을 분석하여 다음 행사를 위한 건의사항 3가지를 번호와 함께 간결하게 제시해주세요.
 과거에 같은 문제가 있었다면 반드시 언급해주세요.`;
-
             const aiResponse = await callGemini(prompt) ||
                 '1. API 키를 설정하면 GEMS가 맞춤형 건의사항을 제공합니다.\n2. 사이드바 하단의 [키 재설정] 버튼을 눌러 API 키를 입력해주세요.';
-
             responseArea.innerHTML = `<div class="ai-bubble"><p style="font-size:12px; line-height:1.7; margin:0; white-space:pre-wrap;">${aiResponse}</p></div>`;
-
             if(!feedbackHistory[cat]) feedbackHistory[cat] = [];
             feedbackHistory[cat].push({ date: new Date().toLocaleDateString('ko-KR'), cat, input, response: aiResponse });
             localStorage.setItem('v31_feedback', JSON.stringify(feedbackHistory));
@@ -696,10 +709,12 @@ ${pastFeedbacks ? `\n과거 피드백 히스토리:\n${pastFeedbacks}\n` : ''}
         function selectReportType(type) {
             selectedReportType = type;
             selectedReportEventId = null;
+            visionLayoutData = null;
             document.getElementById('rtype-plan').classList.toggle('selected', type === 'plan');
             document.getElementById('rtype-result').classList.toggle('selected', type === 'result');
             document.getElementById('report-preview-area').style.display = 'none';
             document.getElementById('pre-analysis-area').style.display = 'none';
+            document.getElementById('vision-analysis-area').style.display = 'none';
             document.getElementById('post-analysis-area').style.display = 'none';
             loadReportEvents();
         }
@@ -732,6 +747,7 @@ ${pastFeedbacks ? `\n과거 피드백 히스토리:\n${pastFeedbacks}\n` : ''}
 
         async function selectReportEvent(id) {
             selectedReportEventId = id;
+            visionLayoutData = null;
             document.querySelectorAll('.event-select-item').forEach(el => el.classList.remove('selected'));
             const el = document.getElementById('rev-' + id);
             if(el) el.classList.add('selected');
@@ -741,20 +757,142 @@ ${pastFeedbacks ? `\n과거 피드백 히스토리:\n${pastFeedbacks}\n` : ''}
             document.getElementById('report-title').value = e.name;
             document.getElementById('report-loc').value = e.loc || '';
 
-            // Show preview
             const imgSrc = selectedReportType === 'plan' ? e.planImg : e.resultImg;
             const previewArea = document.getElementById('report-preview-area');
             const previewImg = document.getElementById('report-preview-img');
             const previewNone = document.getElementById('report-preview-none');
             previewArea.style.display = 'block';
-            if(imgSrc) { previewImg.src = imgSrc; previewImg.style.display = 'block'; previewNone.style.display = 'none'; }
-            else { previewImg.style.display = 'none'; previewNone.style.display = 'block'; }
+            if(imgSrc) {
+                previewImg.src = imgSrc;
+                previewImg.style.display = 'block';
+                previewNone.style.display = 'none';
+            } else {
+                previewImg.style.display = 'none';
+                previewNone.style.display = 'block';
+            }
 
-            // Hide old post-analysis
             document.getElementById('post-analysis-area').style.display = 'none';
 
-            // Run GEMS pre-analysis
-            await runPreAnalysis(e);
+            // Run pre-analysis and vision analysis in parallel
+            await Promise.all([
+                runPreAnalysis(e),
+                imgSrc ? runVisionAnalysis(imgSrc, e) : Promise.resolve()
+            ]);
+        }
+
+        // ===== VISION LAYOUT ANALYSIS =====
+        async function runVisionAnalysis(imgSrc, e) {
+            const visionArea = document.getElementById('vision-analysis-area');
+            const visionContent = document.getElementById('vision-analysis-content');
+            visionArea.style.display = 'block';
+
+            // Show progress UI
+            visionContent.innerHTML = `
+                <div class="vision-progress">
+                    <div class="vision-step active" id="vstep-1">
+                        <div class="step-icon active">👁</div>
+                        <span>이미지 구조 분석 중...</span>
+                    </div>
+                    <div class="vision-step" id="vstep-2">
+                        <div class="step-icon">📐</div>
+                        <span>레이아웃 패턴 추출</span>
+                    </div>
+                    <div class="vision-step" id="vstep-3">
+                        <div class="step-icon">🎨</div>
+                        <span>PPT 슬라이드 구조 설계</span>
+                    </div>
+                </div>
+            `;
+
+            const visionPrompt = `이 이미지는 회사 행사 보고서 또는 발표 자료입니다.
+이미지를 분석하여 PPT 슬라이드 재현에 필요한 레이아웃 정보를 추출해주세요.
+
+다음 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
+{
+  "layoutType": "cover|content|table|chart|image-left|image-right|full-image|split|text-only",
+  "hasTitle": true,
+  "hasSectionHeaders": true,
+  "hasTable": false,
+  "hasChart": false,
+  "hasImage": true,
+  "imagePosition": "left|right|top|bottom|center|background|none",
+  "colorScheme": "dark|light|colorful",
+  "dominantColor": "#064e3b",
+  "accentColor": "#bef264",
+  "textColor": "#ffffff",
+  "columns": 1,
+  "keyElements": ["제목 영역", "로고", "날짜", "본문 텍스트 블록"],
+  "slideStructure": "표지|목차|본문|결과|마무리",
+  "detectedTexts": ["감지된 텍스트1", "감지된 텍스트2"],
+  "layoutDescription": "전체 레이아웃에 대한 한국어 설명 1~2문장"
+}`;
+
+            const result = await callGeminiVisionJSON(imgSrc, visionPrompt);
+
+            // Update progress steps
+            document.getElementById('vstep-1').className = 'vision-step done';
+            document.getElementById('vstep-1').querySelector('.step-icon').className = 'step-icon done';
+            document.getElementById('vstep-1').querySelector('.step-icon').textContent = '✓';
+            document.getElementById('vstep-2').className = 'vision-step active';
+            document.getElementById('vstep-2').querySelector('.step-icon').className = 'step-icon active';
+
+            await new Promise(r => setTimeout(r, 600));
+
+            document.getElementById('vstep-2').className = 'vision-step done';
+            document.getElementById('vstep-2').querySelector('.step-icon').className = 'step-icon done';
+            document.getElementById('vstep-2').querySelector('.step-icon').textContent = '✓';
+            document.getElementById('vstep-3').className = 'vision-step active';
+            document.getElementById('vstep-3').querySelector('.step-icon').className = 'step-icon active';
+
+            await new Promise(r => setTimeout(r, 400));
+
+            document.getElementById('vstep-3').className = 'vision-step done';
+            document.getElementById('vstep-3').querySelector('.step-icon').className = 'step-icon done';
+            document.getElementById('vstep-3').querySelector('.step-icon').textContent = '✓';
+
+            if(result) {
+                visionLayoutData = result;
+                const elements = (result.keyElements || []).map(el => `<span class="layout-tag">${el}</span>`).join('');
+                visionContent.innerHTML = `
+                    <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:16px; padding:18px 20px;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                            <span style="font-size:18px;">🔍</span>
+                            <span style="font-size:13px; font-weight:800; color:#064e3b;">Vision 분석 완료</span>
+                        </div>
+                        <p style="font-size:12px; color:#166534; font-weight:700; margin:0 0 12px; line-height:1.6;">${result.layoutDescription || '레이아웃 분석이 완료되었습니다.'}</p>
+                        <div style="margin-bottom:10px;">
+                            <span style="font-size:10px; font-weight:800; color:#16a34a; text-transform:uppercase; letter-spacing:0.08em;">감지된 레이아웃 요소</span>
+                            <div style="margin-top:6px;">${elements || '<span class="layout-tag">기본 레이아웃</span>'}</div>
+                        </div>
+                        <div style="display:flex; gap:16px; margin-top:12px;">
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <div style="width:16px; height:16px; border-radius:4px; background:${result.dominantColor || '#064e3b'}; border:1px solid #dcfce7;"></div>
+                                <span style="font-size:10px; font-weight:700; color:#6b7280;">주색상</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <div style="width:16px; height:16px; border-radius:4px; background:${result.accentColor || '#bef264'}; border:1px solid #dcfce7;"></div>
+                                <span style="font-size:10px; font-weight:700; color:#6b7280;">강조색</span>
+                            </div>
+                            <div style="font-size:10px; font-weight:700; color:#6b7280; display:flex; align-items:center;">
+                                레이아웃: <strong style="color:#064e3b; margin-left:4px;">${result.layoutType || 'content'}</strong>
+                            </div>
+                            <div style="font-size:10px; font-weight:700; color:#6b7280; display:flex; align-items:center;">
+                                컬럼: <strong style="color:#064e3b; margin-left:4px;">${result.columns || 1}단</strong>
+                            </div>
+                        </div>
+                        <div style="margin-top:10px; padding:8px 12px; background:#dcfce7; border-radius:10px;">
+                            <span style="font-size:11px; font-weight:700; color:#064e3b;">✅ 이 레이아웃을 기반으로 PPT가 생성됩니다</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                visionLayoutData = null;
+                visionContent.innerHTML = `
+                    <div style="background:#fefce8; border:1px solid #fde68a; border-radius:16px; padding:16px 20px; font-size:12px; font-weight:700; color:#92400e;">
+                        ⚠️ Vision 분석을 사용할 수 없습니다 (API 키 미설정 또는 오류). 기본 템플릿으로 PPT가 생성됩니다.
+                    </div>
+                `;
+            }
         }
 
         async function runPreAnalysis(e) {
@@ -770,34 +908,20 @@ ${pastFeedbacks ? `\n과거 피드백 히스토리:\n${pastFeedbacks}\n` : ''}
             const typeLabel = selectedReportType === 'plan' ? '계획안' : '결과보고';
 
             const prompt = `다음 행사의 PPT 보고서(${typeLabel}) 생성 전 체크포인트를 분석해주세요.
-
-행사명: ${e.name}
-카테고리: ${cat}
-날짜: ${e.date}
-장소: ${e.loc || '미지정'}
-계획안 이미지: ${hasPlan ? '있음' : '없음'}
-결과보고 이미지: ${hasResult ? '있음' : '없음'}
-보고서 유형: ${typeLabel}
+행사명: ${e.name} / 카테고리: ${cat} / 날짜: ${e.date} / 장소: ${e.loc || '미지정'}
+계획안 이미지: ${hasPlan ? '있음' : '없음'} / 결과보고 이미지: ${hasResult ? '있음' : '없음'}
 ${pastFB ? `과거 AI 피드백:\n${pastFB}` : ''}
-
 다음 JSON만 응답하세요:
-{
-  "checks": [
-    { "type": "warn|info|ok", "message": "체크포인트 내용" }
-  ]
-}
-type은 warn(주의), info(정보), ok(확인됨) 중 하나. 3~5개 항목.`;
+{"checks":[{"type":"warn|info|ok","message":"내용"}]}
+type은 warn/info/ok 중 하나. 3~5개 항목.`;
 
             const result = await callGeminiJSON(prompt);
-
             if(!result || !result.checks) {
-                // Fallback local checks
                 const checks = [];
-                if(!hasPlan) checks.push({ type: 'warn', message: '계획안 이미지가 없습니다. 통합 행사 관리에서 업로드하면 PPT 품질이 높아집니다.' });
-                if(!hasResult) checks.push({ type: 'warn', message: '결과보고 이미지가 없습니다. 행사 완료 후 반드시 업로드해주세요.' });
-                if(!e.loc) checks.push({ type: 'info', message: '장소가 미지정입니다. 위의 장소 필드를 채우면 PPT에 자동 반영됩니다.' });
-                if(pastFB) checks.push({ type: 'info', message: '이 카테고리의 과거 피드백이 있습니다. 개선사항 슬라이드에 자동 반영됩니다.' });
-                checks.push({ type: 'ok', message: '보고서 타이틀과 협력사를 입력하면 표지 슬라이드가 더욱 완성도 높게 생성됩니다.' });
+                if(!hasPlan) checks.push({ type: 'warn', message: '계획안 이미지가 없습니다.' });
+                if(!hasResult) checks.push({ type: 'warn', message: '결과보고 이미지가 없습니다.' });
+                if(!e.loc) checks.push({ type: 'info', message: '장소가 미지정입니다.' });
+                checks.push({ type: 'ok', message: '보고서 타이틀과 협력사를 입력하면 표지가 완성됩니다.' });
                 renderPreChecks(checks);
             } else {
                 renderPreChecks(result.checks);
@@ -819,7 +943,7 @@ type은 warn(주의), info(정보), ok(확인됨) 중 하나. 3~5개 항목.`;
             `).join('');
         }
 
-        // ===== PPT GENERATION =====
+        // ===== PPT GENERATION (Vision-aware) =====
         async function generatePPT() {
             if(!selectedReportEventId) { alert('행사를 선택해주세요.'); return; }
             const e = events.find(ev => ev.id === selectedReportEventId);
@@ -832,7 +956,6 @@ type은 warn(주의), info(정보), ok(확인됨) 중 하나. 3~5개 항목.`;
             const partner = document.getElementById('report-partner').value || '';
             const typeLabel = selectedReportType === 'plan' ? '계획안' : '결과보고';
 
-            // Gather all same-category event data for context
             const catEvents = events.filter(ev => ev.cat === cat && ev.id !== e.id);
             const catContext = catEvents.map(ev => `- ${ev.name} (${ev.date}, ${ev.loc || '장소미지정'})`).join('\n');
             const pastFB = (feedbackHistory[cat] || []).slice(-5).map(h => h.response).join('\n');
@@ -844,24 +967,13 @@ type은 warn(주의), info(정보), ok(확인됨) 중 하나. 3~5개 항목.`;
             statusEl.style.display = 'block';
             statusEl.textContent = 'GEMS가 보고서를 분석하고 있습니다...';
 
-            // AI content generation
             let aiPoints = [], feedbackSuggestions = [], postFeedback = [], postRecommend = [];
 
-            const prompt = `카테고리: ${cat}
-행사명: ${title}
-장소: ${loc}
-협력사: ${partner}
-보고서 유형: ${typeLabel}
+            const prompt = `카테고리: ${cat} / 행사명: ${title} / 장소: ${loc} / 협력사: ${partner} / 보고서 유형: ${typeLabel}
 ${catContext ? `같은 카테고리 과거 행사:\n${catContext}` : ''}
-${pastFB ? `과거 AI 피드백 히스토리:\n${pastFB}` : ''}
-
-다음 JSON만 응답하세요 (다른 텍스트 없이):
-{
-  "points": ["핵심내용1", "핵심내용2", "핵심내용3", "핵심내용4"],
-  "improvements": ["개선제언1", "개선제언2", "개선제언3"],
-  "postFeedback": ["보고서총평1", "보고서총평2"],
-  "postRecommend": ["추천추가요소1", "추천추가요소2", "추천추가요소3"]
-}`;
+${pastFB ? `과거 AI 피드백:\n${pastFB}` : ''}
+다음 JSON만 응답하세요:
+{"points":["핵심내용1","핵심내용2","핵심내용3","핵심내용4"],"improvements":["개선1","개선2","개선3"],"postFeedback":["총평1","총평2"],"postRecommend":["추천1","추천2","추천3"]}`;
 
             const parsed = await callGeminiJSON(prompt);
             if(parsed) {
@@ -871,14 +983,25 @@ ${pastFB ? `과거 AI 피드백 히스토리:\n${pastFB}` : ''}
                 postRecommend = parsed.postRecommend || [];
             }
 
-            statusEl.textContent = 'PPT 슬라이드 생성 중...';
+            statusEl.textContent = 'Vision 레이아웃 기반 PPT 슬라이드 생성 중...';
 
-            // ===== BUILD PPT =====
+            // Use vision data if available, otherwise defaults
+            const layout = visionLayoutData || {};
+            const BG = (layout.dominantColor || '#064e3b').replace('#','');
+            const ACCENT = (layout.accentColor || '#bef264').replace('#','');
+            const WHITE = 'FFFFFF';
+            const LIGHT = 'ecfccb';
+            const MID = 'dcfce7';
+            const DARK = '053d2e';
+            const layoutType = layout.layoutType || 'content';
+            const hasTable = layout.hasTable || false;
+            const imgPos = layout.imagePosition || 'left';
+            const columns = layout.columns || 1;
+
             const pptx = new PptxGenJS();
             pptx.layout = 'LAYOUT_16x9';
-            const BG='064e3b', ACCENT='bef264', WHITE='FFFFFF', LIGHT='ecfccb', MID='dcfce7', DARK='053d2e';
 
-            // Slide 1: Cover
+            // ===== SLIDE 1: Cover (always based on vision color scheme) =====
             const s1 = pptx.addSlide();
             s1.background = { color: BG };
             s1.addShape(pptx.ShapeType.rect, { x:0, y:0, w:0.25, h:5.63, fill:{color:ACCENT} });
@@ -889,43 +1012,90 @@ ${pastFB ? `과거 AI 피드백 히스토리:\n${pastFB}` : ''}
             if(loc) s1.addText('📍 '+loc+(partner ? '   |   🤝 '+partner : ''), { x:0.55, y:3.9, w:9, h:0.45, color:LIGHT, fontSize:13, fontFace:'Malgun Gothic' });
             s1.addText(e.date+'   '+new Date().toLocaleDateString('ko-KR'), { x:0.55, y:5.05, w:9, h:0.35, color:ACCENT, fontSize:11, fontFace:'Malgun Gothic' });
 
-            // Slide 2: Main (image + points)
+            // ===== SLIDE 2: Main content - layout adapted from Vision analysis =====
             const s2 = pptx.addSlide();
-            s2.background = { color:LIGHT };
+            s2.background = { color: LIGHT };
             s2.addShape(pptx.ShapeType.rect, { x:0, y:0, w:10, h:0.9, fill:{color:BG} });
             s2.addText(typeLabel+' 주요 내용', { x:0.4, y:0.1, w:9, h:0.7, color:WHITE, fontSize:20, bold:true, fontFace:'Malgun Gothic' });
+
             if(imgSrc) {
-                s2.addImage({ data:imgSrc, x:0.3, y:1.1, w:5.2, h:4.2, sizing:{type:'contain',w:5.2,h:4.2} });
+                // Adapt image position based on vision analysis
+                if(imgPos === 'right') {
+                    // Image on right, text on left
+                    if(aiPoints.length > 0) {
+                        const rows = aiPoints.map((pt,i) => [
+                            { text:`0${i+1}`, options:{color:ACCENT,bold:true,fontSize:12,fontFace:'Malgun Gothic',fill:BG} },
+                            { text:pt, options:{color:'166534',fontSize:11,fontFace:'Malgun Gothic',fill:WHITE} }
+                        ]);
+                        s2.addTable(rows, { x:0.3, y:1.1, w:4.5, h:4.2, colW:[0.5,4.0], border:{color:MID}, rowH:0.9 });
+                    }
+                    s2.addImage({ data:imgSrc, x:5.1, y:1.1, w:4.6, h:4.2, sizing:{type:'contain',w:4.6,h:4.2} });
+                } else if(imgPos === 'top') {
+                    // Image on top, text below
+                    s2.addImage({ data:imgSrc, x:0.3, y:1.0, w:9.4, h:2.5, sizing:{type:'contain',w:9.4,h:2.5} });
+                    if(aiPoints.length > 0) {
+                        const pointsText = aiPoints.map((pt,i) => `${i+1}. ${pt}`).join('\n');
+                        s2.addText(pointsText, { x:0.3, y:3.7, w:9.4, h:1.7, color:'166534', fontSize:11, fontFace:'Malgun Gothic', wrap:true, valign:'top', lineSpacingMultiple:1.4 });
+                    }
+                } else if(imgPos === 'background') {
+                    // Image as background with text overlay
+                    s2.addImage({ data:imgSrc, x:0, y:0, w:10, h:5.63, sizing:{type:'cover',w:10,h:5.63} });
+                    s2.addShape(pptx.ShapeType.rect, { x:0, y:0, w:10, h:5.63, fill:{color:'000000', transparency:50} });
+                    if(aiPoints.length > 0) {
+                        const pointsText = aiPoints.map((pt,i) => `${i+1}. ${pt}`).join('\n');
+                        s2.addText(pointsText, { x:0.5, y:1.2, w:9, h:4, color:WHITE, fontSize:14, fontFace:'Malgun Gothic', wrap:true, bold:true, lineSpacingMultiple:1.6 });
+                    }
+                } else {
+                    // Default: image left, table right
+                    s2.addImage({ data:imgSrc, x:0.3, y:1.1, w:5.2, h:4.2, sizing:{type:'contain',w:5.2,h:4.2} });
+                    if(aiPoints.length > 0) {
+                        const rows = aiPoints.map((pt,i) => [
+                            { text:`0${i+1}`, options:{color:ACCENT,bold:true,fontSize:12,fontFace:'Malgun Gothic',fill:BG} },
+                            { text:pt, options:{color:'166534',fontSize:11,fontFace:'Malgun Gothic',fill:WHITE} }
+                        ]);
+                        s2.addTable(rows, { x:5.8, y:1.1, w:3.9, h:4.2, colW:[0.5,3.4], border:{color:MID}, rowH:0.9 });
+                    }
+                }
             } else {
+                // No image - text only or table layout
                 s2.addShape(pptx.ShapeType.rect, { x:0.3, y:1.1, w:5.2, h:4.2, fill:{color:MID}, line:{color:ACCENT,width:1} });
                 s2.addText('이미지 없음\n(통합 행사 관리에서 업로드하세요)', { x:0.3, y:2.5, w:5.2, h:1, color:'aaaaaa', fontSize:11, align:'center', fontFace:'Malgun Gothic', wrap:true });
-            }
-            if(aiPoints.length > 0) {
-                const rows = aiPoints.map((pt,i) => [
-                    { text:`0${i+1}`, options:{color:ACCENT,bold:true,fontSize:12,fontFace:'Malgun Gothic',fill:BG} },
-                    { text:pt, options:{color:'166534',fontSize:11,fontFace:'Malgun Gothic',fill:WHITE} }
-                ]);
-                s2.addTable(rows, { x:5.8, y:1.1, w:3.9, h:4.2, colW:[0.5,3.4], border:{color:MID}, rowH:0.9 });
+                if(aiPoints.length > 0) {
+                    const rows = aiPoints.map((pt,i) => [
+                        { text:`0${i+1}`, options:{color:ACCENT,bold:true,fontSize:12,fontFace:'Malgun Gothic',fill:BG} },
+                        { text:pt, options:{color:'166534',fontSize:11,fontFace:'Malgun Gothic',fill:WHITE} }
+                    ]);
+                    s2.addTable(rows, { x:5.8, y:1.1, w:3.9, h:4.2, colW:[0.5,3.4], border:{color:MID}, rowH:0.9 });
+                }
             }
 
-            // Slide 3: Improvements
-            const s3 = pptx.addSlide();
-            s3.background = { color:BG };
-            s3.addShape(pptx.ShapeType.rect, { x:0, y:0, w:10, h:0.9, fill:{color:DARK} });
-            s3.addText('개선사항 & 다음 행사 제언', { x:0.4, y:0.1, w:9, h:0.7, color:ACCENT, fontSize:20, bold:true, fontFace:'Malgun Gothic' });
+            // ===== SLIDE 3: Table slide if vision detected a table, else improvements =====
+            if(hasTable && imgSrc) {
+                const s3 = pptx.addSlide();
+                s3.background = { color: LIGHT };
+                s3.addShape(pptx.ShapeType.rect, { x:0, y:0, w:10, h:0.9, fill:{color:BG} });
+                s3.addText('세부 현황', { x:0.4, y:0.1, w:9, h:0.7, color:WHITE, fontSize:20, bold:true, fontFace:'Malgun Gothic' });
+                s3.addImage({ data:imgSrc, x:0.3, y:1.1, w:9.4, h:4.2, sizing:{type:'contain',w:9.4,h:4.2} });
+            }
+
+            // ===== SLIDE: Improvements =====
+            const sImp = pptx.addSlide();
+            sImp.background = { color: BG };
+            sImp.addShape(pptx.ShapeType.rect, { x:0, y:0, w:10, h:0.9, fill:{color:DARK} });
+            sImp.addText('개선사항 & 다음 행사 제언', { x:0.4, y:0.1, w:9, h:0.7, color:ACCENT, fontSize:20, bold:true, fontFace:'Malgun Gothic' });
             const historyItems = (feedbackHistory[cat]||[]).slice(-3).map(h=>'· '+h.response.split('\n')[0]);
             const allImprovements = feedbackSuggestions.length>0
                 ? feedbackSuggestions.map((s,i)=>`${i+1}. ${s}`)
                 : historyItems.length>0 ? historyItems
                 : ['· AI 피드백 탭에서 건의사항을 입력하면 자동 반영됩니다.'];
-            s3.addText(allImprovements.join('\n\n'), { x:0.6, y:1.1, w:8.8, h:4.2, color:WHITE, fontSize:14, fontFace:'Malgun Gothic', valign:'top', wrap:true, lineSpacingMultiple:1.5 });
+            sImp.addText(allImprovements.join('\n\n'), { x:0.6, y:1.1, w:8.8, h:4.2, color:WHITE, fontSize:14, fontFace:'Malgun Gothic', valign:'top', wrap:true, lineSpacingMultiple:1.5 });
 
-            // Slide 4: Close
-            const s4 = pptx.addSlide();
-            s4.background = { color:LIGHT };
-            s4.addShape(pptx.ShapeType.rect, { x:3.5, y:1.5, w:3, h:2.5, fill:{color:BG} });
-            s4.addText('VINATECH', { x:3.5, y:2.4, w:3, h:0.5, color:ACCENT, fontSize:18, bold:true, align:'center', fontFace:'Malgun Gothic' });
-            s4.addText('감사합니다', { x:0.5, y:4.8, w:9, h:0.5, color:BG, fontSize:16, bold:true, align:'center', fontFace:'Malgun Gothic' });
+            // ===== SLIDE: Close =====
+            const sEnd = pptx.addSlide();
+            sEnd.background = { color: LIGHT };
+            sEnd.addShape(pptx.ShapeType.rect, { x:3.5, y:1.5, w:3, h:2.5, fill:{color:BG} });
+            sEnd.addText('VINATECH', { x:3.5, y:2.4, w:3, h:0.5, color:ACCENT, fontSize:18, bold:true, align:'center', fontFace:'Malgun Gothic' });
+            sEnd.addText('감사합니다', { x:0.5, y:4.8, w:9, h:0.5, color:BG, fontSize:16, bold:true, align:'center', fontFace:'Malgun Gothic' });
 
             statusEl.textContent = '파일 저장 중...';
             const safeTitle = title.replace(/[^a-zA-Z0-9가-힣]/g,'_');
@@ -934,36 +1104,34 @@ ${pastFB ? `과거 AI 피드백 히스토리:\n${pastFB}` : ''}
             btn.disabled = false;
             btn.innerHTML = '<i data-lucide="wand-2" style="width:18px;height:18px;display:inline;vertical-align:middle;margin-right:8px;"></i>지능형 PPT 생성 시작';
             statusEl.textContent = '✅ 다운로드 완료!';
-            lucide.createIcons();
+            if(window.lucide) lucide.createIcons();
             setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
 
-            // Show post-analysis
-            renderPostAnalysis(postFeedback, postRecommend, cat, e);
+            renderPostAnalysis(postFeedback, postRecommend, cat, e, layout);
         }
 
-        function renderPostAnalysis(feedback, recommend, cat, e) {
+        function renderPostAnalysis(feedback, recommend, cat, e, layout) {
             const postArea = document.getElementById('post-analysis-area');
             const fbContent = document.getElementById('post-feedback-content');
             const recContent = document.getElementById('post-recommend-content');
             postArea.style.display = 'block';
 
-            // Feedback
+            const visionNote = layout && layout.layoutType
+                ? `<div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:12px 16px; margin-bottom:8px; font-size:12px; font-weight:700; color:#1e40af; display:flex; gap:10px;"><span>🔍</span><span>Vision 분석 기반: <strong>${layout.layoutType}</strong> 레이아웃으로 생성되었습니다. ${layout.layoutDescription || ''}</span></div>`
+                : '';
+
             if(feedback.length > 0) {
-                fbContent.innerHTML = feedback.map(f => `
+                fbContent.innerHTML = visionNote + feedback.map(f => `
                     <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:12px; padding:12px 16px; margin-bottom:8px; font-size:12px; font-weight:700; color:#166534; display:flex; gap:10px; align-items:flex-start;">
                         <span>📋</span><span>${f}</span>
                     </div>
                 `).join('');
             } else {
-                // Local fallback
                 const hasBoth = e.planImg && e.resultImg;
-                const fb = hasBoth
-                    ? '계획안과 결과보고 이미지가 모두 있어 보고서 완성도가 높습니다.'
-                    : '이미지가 부족합니다. 통합 행사 관리에서 이미지를 추가하면 다음 보고서 품질이 향상됩니다.';
-                fbContent.innerHTML = `<div style="background:#f0fdf4; border:1px solid #86efac; border-radius:12px; padding:12px 16px; font-size:12px; font-weight:700; color:#166534; display:flex; gap:10px;"><span>📋</span><span>${fb}</span></div>`;
+                const fb = hasBoth ? '계획안과 결과보고 이미지가 모두 있어 보고서 완성도가 높습니다.' : '이미지가 부족합니다. 통합 행사 관리에서 이미지를 추가하면 다음 보고서 품질이 향상됩니다.';
+                fbContent.innerHTML = visionNote + `<div style="background:#f0fdf4; border:1px solid #86efac; border-radius:12px; padding:12px 16px; font-size:12px; font-weight:700; color:#166534; display:flex; gap:10px;"><span>📋</span><span>${fb}</span></div>`;
             }
 
-            // Recommendations
             const defaultRecs = [
                 '✨ 참가자 만족도 그래프를 추가하면 경영진 설득력이 높아집니다.',
                 '✨ 협력사 로고 슬라이드를 추가해보세요.',
@@ -972,24 +1140,21 @@ ${pastFB ? `과거 AI 피드백 히스토리:\n${pastFB}` : ''}
             const recs = recommend.length > 0 ? recommend.map(r => '✨ ' + r) : defaultRecs;
             recContent.innerHTML = recs.map(r => `
                 <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:12px 16px; margin-bottom:8px; font-size:12px; font-weight:700; color:#92400e; display:flex; gap:10px; align-items:flex-start;">
-                    <span style="flex-shrink:0;">${r.startsWith('✨') ? '' : '✨'}</span><span>${r}</span>
+                    <span style="flex-shrink:0;">✨</span><span>${r.replace('✨ ','').replace('✨','')}</span>
                 </div>
             `).join('');
 
             postArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            lucide.createIcons();
+            if(window.lucide) lucide.createIcons();
         }
 
         // ===== INIT =====
         window.onload = () => {
             updateKeyStatus();
-            // Show API key modal on first run
-            if(!geminiKey) {
-                document.getElementById('apikey-modal').classList.add('open');
-            }
+            if(!geminiKey) document.getElementById('apikey-modal').classList.add('open');
             syncCategorySelects();
             renderEvents();
-            lucide.createIcons();
+            if(window.lucide) lucide.createIcons();
         };
     </script>
 </body>
